@@ -4,7 +4,7 @@ name: Build Sakura Manager APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [main]
 
 permissions:
   contents: read
@@ -29,7 +29,30 @@ jobs:
 
       - name: Extract Android project
         run: |
-          unzip -q SakuraManagerAndroid_Source.zip -d .
+          ARCHIVE=$(find . -maxdepth 1 -name 'SakuraManagerAndroid_Source*.zip' -print -quit)
+          test -n "$ARCHIVE"
+          unzip -q "$ARCHIVE" -d .
+
+      - name: Set Java and Kotlin target to 17
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("SakuraManagerAndroid/app/build.gradle.kts")
+          s = p.read_text()
+          s = s.replace(
+              "android {",
+              '''android {
+              compileOptions {
+                  sourceCompatibility = JavaVersion.VERSION_17
+                  targetCompatibility = JavaVersion.VERSION_17
+              }
+              kotlinOptions {
+                  jvmTarget = "17"
+              }''',
+              1
+          )
+          p.write_text(s)
+          PY
 
       - name: Build APK
         run: gradle -p SakuraManagerAndroid assembleDebug
